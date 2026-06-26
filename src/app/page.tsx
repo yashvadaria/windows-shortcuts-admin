@@ -1,103 +1,188 @@
-import Image from "next/image";
+"use client";
+
+import { useCallback, useEffect, useState } from "react";
+
+type FreeUser = {
+  _id: string;
+  email?: string;
+  created_at?: string;
+};
+
+type PaidUser = {
+  _id: string;
+  email?: string;
+  activation_code?: string;
+  created_at?: string;
+  stripe_session_id?: string;
+  stripe_payment_id?: string;
+};
+
+function formatDate(iso?: string) {
+  if (!iso) return "—";
+  try {
+    return new Intl.DateTimeFormat(undefined, {
+      dateStyle: "medium",
+      timeStyle: "short",
+    }).format(new Date(iso));
+  } catch {
+    return iso;
+  }
+}
 
 export default function Home() {
-  return (
-    <div className="font-sans grid grid-rows-[20px_1fr_20px] items-center justify-items-center min-h-screen p-8 pb-20 gap-16 sm:p-20">
-      <main className="flex flex-col gap-[32px] row-start-2 items-center sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={180}
-          height={38}
-          priority
-        />
-        <ol className="font-mono list-inside list-decimal text-sm/6 text-center sm:text-left">
-          <li className="mb-2 tracking-[-.01em]">
-            Get started by editing{" "}
-            <code className="bg-black/[.05] dark:bg-white/[.06] font-mono font-semibold px-1 py-0.5 rounded">
-              src/app/page.tsx
-            </code>
-            .
-          </li>
-          <li className="tracking-[-.01em]">
-            Save and see your changes instantly.
-          </li>
-        </ol>
+  const [freeUsers, setFreeUsers] = useState<FreeUser[]>([]);
+  const [paidUsers, setPaidUsers] = useState<PaidUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-        <div className="flex gap-4 items-center flex-col sm:flex-row">
-          <a
-            className="rounded-full border border-solid border-transparent transition-colors flex items-center justify-center bg-foreground text-background gap-2 hover:bg-[#383838] dark:hover:bg-[#ccc] font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 sm:w-auto"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={20}
-              height={20}
-            />
-            Deploy now
-          </a>
-          <a
-            className="rounded-full border border-solid border-black/[.08] dark:border-white/[.145] transition-colors flex items-center justify-center hover:bg-[#f2f2f2] dark:hover:bg-[#1a1a1a] hover:border-transparent font-medium text-sm sm:text-base h-10 sm:h-12 px-4 sm:px-5 w-full sm:w-auto md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Read our docs
-          </a>
+  const load = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/users");
+      const data = await res.json().catch(() => ({}));
+      if (!res.ok) throw new Error(data.error || res.statusText);
+      setFreeUsers(data.free_users || []);
+      setPaidUsers(data.paid_users || []);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Failed to load");
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    load();
+  }, [load]);
+
+  async function exportFreeCsv() {
+    setError(null);
+    try {
+      const res = await fetch("/api/users/free/export");
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}));
+        throw new Error(data.error || res.statusText);
+      }
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = "free_users_export.csv";
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Export failed");
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-zinc-950 text-zinc-100">
+      <header className="border-b border-zinc-800 bg-zinc-900/50 px-6 py-4 flex items-center justify-between">
+        <div>
+          <h1 className="text-lg font-semibold">Windows Shortcuts Admin</h1>
+          <p className="text-xs text-zinc-500">
+            {freeUsers.length} free · {paidUsers.length} paid
+          </p>
         </div>
+        <button
+          type="button"
+          onClick={load}
+          disabled={loading}
+          className="rounded-lg border border-zinc-700 px-4 py-2 text-sm hover:bg-zinc-800 disabled:opacity-50"
+        >
+          {loading ? "Refreshing…" : "Refresh"}
+        </button>
+      </header>
+
+      <main className="mx-auto max-w-7xl px-6 py-8 space-y-10">
+        {error && (
+          <div className="rounded-lg border border-red-900/50 bg-red-950/40 px-4 py-3 text-sm text-red-300">
+            {error}
+          </div>
+        )}
+
+        <section>
+          <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500 mb-4">
+            Paid users
+          </h2>
+          <div className="overflow-x-auto rounded-xl border border-zinc-800">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-zinc-800 bg-zinc-900/80">
+                  <th className="px-4 py-3 font-medium text-zinc-400">Email</th>
+                  <th className="px-4 py-3 font-medium text-zinc-400">Activation code</th>
+                  <th className="px-4 py-3 font-medium text-zinc-400">Joined</th>
+                  <th className="px-4 py-3 font-medium text-zinc-400 hidden md:table-cell">
+                    Stripe session
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {paidUsers.length === 0 && (
+                  <tr>
+                    <td colSpan={4} className="px-4 py-8 text-center text-zinc-500">
+                      No paid users yet.
+                    </td>
+                  </tr>
+                )}
+                {paidUsers.map((u) => (
+                  <tr key={u._id} className="border-b border-zinc-800/80 hover:bg-zinc-900/40">
+                    <td className="px-4 py-3 font-mono text-xs text-zinc-200">{u.email || "—"}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-emerald-400/90">
+                      {u.activation_code || "—"}
+                    </td>
+                    <td className="px-4 py-3 text-zinc-400">{formatDate(u.created_at)}</td>
+                    <td className="px-4 py-3 font-mono text-[11px] text-zinc-500 hidden md:table-cell max-w-xs truncate">
+                      {u.stripe_session_id || "—"}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
+
+        <section>
+          <div className="mb-4 flex items-center justify-between gap-4">
+            <h2 className="text-sm font-medium uppercase tracking-wide text-zinc-500">
+              Free download signups
+            </h2>
+            <button
+              type="button"
+              onClick={exportFreeCsv}
+              disabled={loading}
+              className="rounded-lg border border-zinc-700 px-3 py-1.5 text-xs hover:bg-zinc-800 disabled:opacity-50"
+            >
+              Export CSV
+            </button>
+          </div>
+          <div className="overflow-x-auto rounded-xl border border-zinc-800">
+            <table className="w-full text-left text-sm">
+              <thead>
+                <tr className="border-b border-zinc-800 bg-zinc-900/80">
+                  <th className="px-4 py-3 font-medium text-zinc-400">Email</th>
+                  <th className="px-4 py-3 font-medium text-zinc-400">Joined</th>
+                </tr>
+              </thead>
+              <tbody>
+                {freeUsers.length === 0 && (
+                  <tr>
+                    <td colSpan={2} className="px-4 py-8 text-center text-zinc-500">
+                      No free signups yet.
+                    </td>
+                  </tr>
+                )}
+                {freeUsers.map((u) => (
+                  <tr key={u._id} className="border-b border-zinc-800/80 hover:bg-zinc-900/40">
+                    <td className="px-4 py-3 font-mono text-xs text-zinc-200">{u.email || "—"}</td>
+                    <td className="px-4 py-3 text-zinc-400">{formatDate(u.created_at)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </section>
       </main>
-      <footer className="row-start-3 flex gap-[24px] flex-wrap items-center justify-center">
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/file.svg"
-            alt="File icon"
-            width={16}
-            height={16}
-          />
-          Learn
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/window.svg"
-            alt="Window icon"
-            width={16}
-            height={16}
-          />
-          Examples
-        </a>
-        <a
-          className="flex items-center gap-2 hover:underline hover:underline-offset-4"
-          href="https://nextjs.org?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <Image
-            aria-hidden
-            src="/globe.svg"
-            alt="Globe icon"
-            width={16}
-            height={16}
-          />
-          Go to nextjs.org →
-        </a>
-      </footer>
     </div>
   );
 }
