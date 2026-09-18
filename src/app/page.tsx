@@ -18,7 +18,7 @@ type PaidUser = {
 };
 
 function formatDate(iso?: string) {
-  if (!iso) return "—";
+  if (!iso) return ",";
   try {
     return new Intl.DateTimeFormat(undefined, {
       dateStyle: "medium",
@@ -79,7 +79,7 @@ export default function Home() {
     <div className="min-h-screen bg-zinc-950 text-zinc-100">
       <header className="border-b border-zinc-800 bg-zinc-900/50 px-6 py-4 flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold">Windows Shortcuts Admin</h1>
+          <h1 className="text-lg font-semibold">Winkeys Admin</h1>
           <p className="text-xs text-zinc-500">
             {freeUsers.length} free · {paidUsers.length} paid
           </p>
@@ -127,13 +127,13 @@ export default function Home() {
                 )}
                 {paidUsers.map((u) => (
                   <tr key={u._id} className="border-b border-zinc-800/80 hover:bg-zinc-900/40">
-                    <td className="px-4 py-3 font-mono text-xs text-zinc-200">{u.email || "—"}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-zinc-200">{u.email || ","}</td>
                     <td className="px-4 py-3 font-mono text-xs text-emerald-400/90">
-                      {u.activation_code || "—"}
+                      {u.activation_code || ","}
                     </td>
                     <td className="px-4 py-3 text-zinc-400">{formatDate(u.created_at)}</td>
                     <td className="px-4 py-3 font-mono text-[11px] text-zinc-500 hidden md:table-cell max-w-xs truncate">
-                      {u.stripe_session_id || "—"}
+                      {u.stripe_session_id || ","}
                     </td>
                   </tr>
                 ))}
@@ -174,7 +174,7 @@ export default function Home() {
                 )}
                 {freeUsers.map((u) => (
                   <tr key={u._id} className="border-b border-zinc-800/80 hover:bg-zinc-900/40">
-                    <td className="px-4 py-3 font-mono text-xs text-zinc-200">{u.email || "—"}</td>
+                    <td className="px-4 py-3 font-mono text-xs text-zinc-200">{u.email || ","}</td>
                     <td className="px-4 py-3 text-zinc-400">{formatDate(u.created_at)}</td>
                   </tr>
                 ))}

@@ -13,7 +13,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Windows Shortcuts — Admin",
+  title: "Winkeys, Admin",
   description: "Free and paid user dashboard",
 };
 
